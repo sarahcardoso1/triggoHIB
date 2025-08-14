@@ -9,6 +9,15 @@ Este projeto tem como objetivo demonstrar o processo completo de ingestão, tran
 A solução final permite consultas e análises que podem gerar insights relevantes sobre saúde pública no Brasil.
 
 ---
+
+### 📂 Estrutura do repositório
+- scripts -- scripts de ingestão no databricks
+- triggohib --->  models
+- ------------------> staging
+- ----------------------> intermediate staging
+- -----------------------> marts
+  
+---
 ### 🛠️ Arquitetura da Solução
 A arquitetura foi projetada para garantir eficiência, escalabilidade e transparência no fluxo de dados:
 
