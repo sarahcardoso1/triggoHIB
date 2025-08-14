@@ -144,4 +144,4 @@ Exemplo:
 
 ---- 
 ### 📋 Documentação adicional:
-- 🔗 Documentação DBT 
+- 🔗 [Documentação DBT](https://sarahcardoso1.github.io/triggoHIB/) 
