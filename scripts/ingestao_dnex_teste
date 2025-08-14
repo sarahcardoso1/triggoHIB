@@ -1,0 +1,160 @@
+from ftplib import FTP
+import tempfile
+import os
+import readdbc
+import pandas as pd
+import snowflake.connector
+from pyspark.dbutils import DBUtils
+
+dbutils = DBUtils(spark)
+
+def baixar_dbc_ftp(ftp_host: str, ftp_path: str, local_path: str):
+    ftp = FTP(ftp_host)
+    ftp.login()
+    with open(local_path, 'wb') as f:
+        ftp.retrbinary(f'RETR {ftp_path}', f.write)
+    ftp.quit()
+
+def converter_dbc_para_csv(local_dbc: str, local_csv: str):
+    readdbc.dbc2csv(local_dbc, local_csv)
+
+def ler_csv(local_csv: str, sep=';') -> pd.DataFrame:
+    return pd.read_csv(local_csv, sep=sep)
+
+def conectar_snowflake(user, account, warehouse, role, database, schema, password_secret_scope, password_secret_key):
+    password = dbutils.secrets.get(scope=password_secret_scope, key=password_secret_key)
+
+    return snowflake.connector.connect(
+        user=user,
+        password=password,
+        account=account,
+        warehouse=warehouse,
+        role=role,
+        database=database,
+        schema=schema
+    )
+
+def criar_stage(cursor, stage_name='my_stage'):
+    cursor.execute(f"CREATE OR REPLACE TEMPORARY STAGE {stage_name}")
+
+def upload_para_stage(cursor, local_csv, stage_name='my_stage'):
+    cursor.execute(f"PUT file://{local_csv} @{stage_name} AUTO_COMPRESS=FALSE")
+
+def criar_tabela(cursor):
+    cursor.execute("""
+    CREATE OR REPLACE TABLE tb_stg_dnex (
+        ORIGEM STRING,
+        CODESTAB STRING,
+        CODMUNNASC STRING,
+        LOCNASC STRING,
+        IDADEMAE STRING,
+        ESTCIVMAE STRING,
+        ESCMAE STRING,
+        CODOCUPMAE STRING,
+        QTDFILVIVO STRING,
+        QTDFILMORT STRING,
+        CODMUNRES STRING,
+        GESTACAO STRING,
+        GRAVIDEZ STRING,
+        PARTO STRING,
+        CONSULTAS STRING,
+        DTNASC STRING,
+        HORANASC STRING,
+        SEXO STRING,
+        APGAR1 STRING,
+        APGAR5 STRING,
+        RACACOR STRING,
+        PESO STRING,
+        IDANOMAL STRING,
+        DTCADASTRO STRING,
+        CODANOMAL STRING,
+        NUMEROLOTE STRING,
+        VERSAOSIST STRING,
+        DTRECEBIM STRING,
+        DIFDATA STRING,
+        DTRECORIGA STRING,
+        NATURALMAE STRING,
+        CODMUNNATU STRING,
+        CODUFNATU STRING,
+        ESCMAE2010 STRING,
+        SERIESCMAE STRING,
+        DTNASCMAE STRING,
+        RACACORMAE STRING,
+        QTDGESTANT STRING,
+        QTDPARTNOR STRING,
+        QTDPARTCES STRING,
+        IDADEPAI STRING,
+        DTULTMENST STRING,
+        SEMAGESTAC STRING,
+        TPMETESTIM STRING,
+        CONSPRENAT STRING,
+        MESPRENAT STRING,
+        TPAPRESENT STRING,
+        STTRABPART STRING,
+        STCESPARTO STRING,
+        TPNASCASSI STRING,
+        TPFUNCRESP STRING,
+        TPDOCRESP STRING,
+        DTDECLARAC STRING,
+        ESCMAEAGR1 STRING,
+        STDNEPIDEM STRING,
+        STDNNOVA STRING,
+        CODPAISRES STRING,
+        TPROBSON STRING,
+        PARIDADE STRING,
+        KOTELCHUCK STRING,
+        CONTADOR STRING
+    );
+    """)
+
+def carregar_csv_para_tabela(cursor, stage_name='my_stage', arquivo='DNEX2022.csv'):
+    cursor.execute(f"""
+    COPY INTO tb_stg_dnex
+    FROM @{stage_name}/{arquivo}
+    FILE_FORMAT = (
+      TYPE = 'CSV',
+      FIELD_DELIMITER = ',',
+      SKIP_HEADER = 1,
+      FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+    )
+    """)
+
+def main():
+    ftp_host = 'ftp.datasus.gov.br'
+    ftp_path = '/dissemin/publicos/SINASC/1996_/Dados/DNRES/DNEX2022.dbc'
+
+    tmp_dir = tempfile.mkdtemp()
+    local_dbc = os.path.join(tmp_dir, 'DNEX2022.dbc')
+    local_csv = os.path.join(tmp_dir, 'DNEX2022.csv')
+
+    print(f"Arquivo CSV será salvo em: {local_csv}")
+
+    baixar_dbc_ftp(ftp_host, ftp_path, local_dbc)
+    converter_dbc_para_csv(local_dbc, local_csv)
+
+    df = ler_csv(local_csv)
+    print(df.head())
+
+    conn = conectar_snowflake(
+        user='PILOTSARAH',
+        account='PJJVDPZ-RLB57311',
+        warehouse='COMPUTE_WH',
+        role='ACCOUNTADMIN',
+        database='TRIGGO_DB',
+        schema='LANDING',
+        password_secret_scope='meu_escopo',       
+        password_secret_key='snowflake_password' 
+    )
+
+    cur = conn.cursor()
+
+    criar_stage(cur)
+    upload_para_stage(cur, local_csv)
+    criar_tabela(cur)
+    carregar_csv_para_tabela(cur)
+
+    cur.close()
+    conn.close()
+
+if __name__ == "__main__":
+    main()
