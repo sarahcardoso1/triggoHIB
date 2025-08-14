@@ -1,0 +1,114 @@
+version: 2
+
+models:
+  - name: stg_doinf
+    description: "Staging DOINF - limpeza e renomeação"
+    columns:
+      - name: origem
+        description: "Origem do dado"
+        tests:
+          - not_null
+      - name: tipo_obito
+        description: "Tipo de óbito"
+        tests:
+          - not_null
+      - name: dtobito_raw
+        description: "Data do óbito em formato original (string)"
+      - name: idade_raw
+        description: "Idade em formato original (string)"
+      - name: sexo
+        description: "Sexo do indivíduo"
+      - name: codigo_municipio_residencia
+        description: "Código do município de residência"
+        tests:
+          - not_null
+      - name: causa_basica
+        description: "Causa básica do óbito"
+        tests:
+          - not_null
+
+  - name: stg_sinasc
+    description: "Staging SINASC - limpeza e renomeação"
+    columns:
+      - name: codigo_estabelecimento
+        description: "Código do estabelecimento"
+      - name: codigo_municipio_nascimento
+        description: "Código do município de nascimento"
+      - name: data_nascimento_raw
+        description: "Data de nascimento em formato original (string)"
+      - name: sexo_recem_nascido
+        description: "Sexo do recém-nascido"
+        tests:
+          - not_null
+      - name: peso_ao_nascer_gramas
+        description: "Peso do recém-nascido ao nascer"
+        tests:
+          - not_null
+
+  - name: int_obito
+    description: "Intermediário: dados limpos e com datas convertidas do DOINF"
+    columns:
+      - name: data_obito
+        description: "Data do óbito convertida"
+        tests:
+          - not_null
+          - unique
+      - name: idade_anos
+        description: "Idade convertida em anos"
+      - name: codigo_municipio_residencia
+        description: "Código do município de residência"
+        tests:
+          - not_null
+
+  - name: int_nascimento
+    description: "Intermediário: dados limpos e com datas convertidas do SINASC"
+    columns:
+      - name: data_nascimento
+        description: "Data do nascimento convertida"
+        tests:
+          - not_null
+          - unique
+      - name: codigo_municipio_residencia
+        description: "Código do município de residência"
+        tests:
+          - not_null
+
+  - name: dim_tempo
+    description: "Dimensão Tempo"
+    columns:
+      - name: data_evento
+        description: "Data do evento (nascimento ou óbito)"
+        tests:
+          - not_null
+          - unique
+
+  - name: dim_localidade
+    description: "Dimensão Localidade"
+    columns:
+      - name: cod_municipio
+        description: "Código do município"
+        tests:
+          - not_null
+          - unique
+
+  - name: dim_faixa_etaria_sexo
+    description: "Dimensão Faixa Etária e Sexo"
+    columns:
+      - name: sexo
+        description: "Sexo"
+        tests:
+          - not_null
+      - name: faixa_etaria
+        description: "Faixa etária agrupada"
+
+  - name: fato_nasc_obito_mun_mes
+    description: "Fato Nascimento - dados brutos de nascimentos"
+    columns:
+      - name: data_nascimento
+        description: "Data do nascimento"
+        tests:
+          - not_null
+      - name: codigo_municipio_residencia
+        description: "codigo municipio"
+        tests:
+          - not_null
