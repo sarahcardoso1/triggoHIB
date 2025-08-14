@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: datasus
+    database: TRIGGO_DB
+    schema: LANDING
+    tables:
+      - name: doinf
+        identifier: TB_STG_DOINF
+        description: "SIM DOINF raw (óbito infantil)"
+      - name: sinasc_dn
+        identifier: TB_STG_DNBR
+        description: "SINASC DN raw (nascidos vivos)"
